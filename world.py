@@ -5,7 +5,7 @@ import math
 import random
 from block import *
 
-COLOR_NAMES = [ 'red',
+COLOR_SET = [ 'red',
                 'green',
                 'blue']
 
@@ -42,7 +42,7 @@ class World:
 
         for i in range(N):
             col = int(random.uniform(0, 3))
-            b = Block(COLOR_NAMES[col])
+            b = Block(COLOR_SET[col])
             position = True
             while position:
                 pos = int(random.uniform(0, len(block_array)))

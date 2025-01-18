@@ -5,7 +5,7 @@
 class Pose:
 
     x_center = 50
-    y_center = 335 #400      
+    y_center = 320 #400      
 
     def __init__(self):
         self.__x = 0

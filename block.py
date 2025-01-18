@@ -7,9 +7,12 @@ from PyQt5 import QtGui, QtCore
 from PyQt5.QtCore import QPoint, Qt
 from pose import *
 
-COLOR_MAP = { 'red' : QtGui.QColor(255,0,0),
-              'green' : QtGui.QColor(0,255,0),
-              'blue' : QtGui.QColor(0,0,255)}
+COLOR_SET = { "red" : QtGui.QColor(255,0,0),
+              "green" : QtGui.QColor(0,255,0),
+              "blue" : QtGui.QColor(0,0,255)}
+COLOR_NUM = { "0" : "red",
+              "1" : "green",
+              "2" : "blue"}              
 
 class Block:
 
@@ -65,7 +68,7 @@ class Block:
 
     def paint(self, qp):
         qp.setPen(QtCore.Qt.black)
-        qp.setBrush(COLOR_MAP[self.__color])
+        qp.setBrush(COLOR_SET[self.__color])
 
         x, y, a = self.__pose.get_pose()
 

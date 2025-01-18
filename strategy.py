@@ -82,7 +82,7 @@ class main(Agent):
         generate(N) >> [ gen_block(N), +size(10), generate_matrix(), +numBlocks(N)]
         generate(N,C) / (numBlocks(W) & gt(W,0)) >> [ gen_block(N,C), +size(10), generate_matrix(), -numBlocks(W), "W= W + N", +numBlocks(W)]
 
-        pick() >> [show_line("pick() started!"), scan(3,8)]
+        pick() >> [show_line("pick() started!"), scan(2,7)]
         +_scan(XE, YE, XS, YS)[{'from':_A}] >> [ show_line("Start: ", XS, " ", YS," - End: ", XE, " ", YE), path(XS, YS, XE, YE) ]
         +_target(XE, YE)[{'from':_A}] >> [ +target(XE, YE) ]
         

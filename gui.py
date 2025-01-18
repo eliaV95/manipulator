@@ -23,9 +23,18 @@ from telemetry import *
 from world import *
 from phidias_interface import *
 
-COLOR_NAMES = [ 'red',
+COLOR_SET = [ 'red',
                 'green',
                 'blue']
+                
+COLOR_NUM = { "red" : "0",
+              "green" : "1",
+              "blue" : "2"}  
+
+COLOR_NUM1 = { "0" : "red",
+              "1" : "green",
+              "2" : "blue"}              
+              
 
 class MainWindow(QMainWindow):
 
@@ -48,8 +57,8 @@ class MainWindow(QMainWindow):
         self.scan_blocks_mode = True
         self.grabbed = False
         
-        self.current_pos_x = 3
-        self.current_pos_y = 8
+        self.current_pos_x = 2
+        self.current_pos_y = 7
         self.current_man_pos_x = 0
         self.current_man_pos_y = 0 
         self.current_index_pos = 0
@@ -89,10 +98,12 @@ class MainWindow(QMainWindow):
         self.arm = ThreeJointsArm(self.trajectory, self.use_profile)
         self.painter = ThreeJointsArmPainter(self.arm)
 
-        target_x = 0.087
-        target_y = 0 #0.02 #0.05
+        target_x = 0.065 #0.24 #0.27 cestino 319p # 114p iniziali, 0.065 pos metri iniziale   0.095
+        target_y = 0.01 #0.12 #0.05 #0.21 cestino 124p # 314p iniziali, 0.02 pos metri iniziale   -0.035
         target_alpha = -90
-        self.grid_cell_size = 0.01 #0.01
+        self.grid_cell_size = 1
+        self.grid_cell_size_x = 0.00083 #0.01
+        self.grid_cell_size_y = 0.00055
 
         self.arm.set_target_xy_a(target_x, target_y, target_alpha)
 
@@ -111,7 +122,28 @@ class MainWindow(QMainWindow):
 
         self._from = None
     
+    def pixel_to_m(self, x, y):
+        return (abs(50 - x) / 1000, (320 - y) / 1000)
+        
+    def m_to_pixel(self, mx, my):
+        return (50 + (mx * 1000), 320 - (my * 1000)) 
+
+    """
+    def to_pixel(self):
+        return (Pose.x_center + self.__x * 1000, Pose.y_center - self.__y * 1000)
+    
+    def to_cm(self):
+        return (Pose.x_center + self.__x / 1000, Pose.y_center - self.__y / 1000)
+    
+    """
+    
     def set_block_cell_position(self):
+        """
+        self.blocks_array.append([1,9])
+        self.blocks_array.append([2,8])
+        self.blocks_array.append([1,7])
+        self.blocks_array.append([2,7])
+        """
         self.blocks_array.append([2,9])
         self.blocks_array.append([1,9])
         self.blocks_array.append([0,9])
@@ -145,7 +177,13 @@ class MainWindow(QMainWindow):
     
     def drawCandidateBlocks(self):
         #blocks_array is an array with the pixels coordinates used to paint the blocks on screen
-        self.blocks_array.append([self.position_matrix[2][9][0] , self.position_matrix[2][9][1] +5, 40, 40])
+        """
+        self.blocks_array.append([self.position_matrix[1][9][0] , self.position_matrix[1][9][1] +5, 40, 40]) #usare questo per prendere le coordinate cm come nell'ostacolo
+        self.blocks_array.append([self.position_matrix[1][8][0] , self.position_matrix[2][8][1] +5, 40, 40])
+        self.blocks_array.append([self.position_matrix[1][7][0] , self.position_matrix[1][7][1] +5, 40, 40])
+        self.blocks_array.append([self.position_matrix[2][7][0] , self.position_matrix[2][7][1] +5, 40, 40])
+        """
+        self.blocks_array.append([self.position_matrix[2][9][0] , self.position_matrix[2][9][1] +5, 40, 40]) #usare questo per prendere le coordinate cm come nell'ostacolo
         self.blocks_array.append([self.position_matrix[1][9][0] , self.position_matrix[1][9][1] +5, 40, 40])
         self.blocks_array.append([self.position_matrix[0][9][0] , self.position_matrix[0][9][1] +5, 40, 40])
         self.blocks_array.append([self.position_matrix[3][9][0] , self.position_matrix[3][9][1] +5, 40, 40])
@@ -155,6 +193,7 @@ class MainWindow(QMainWindow):
         self.blocks_array.append([self.position_matrix[9][9][0] , self.position_matrix[9][9][1] +5, 40, 40])
         self.blocks_array.append([self.position_matrix[6][9][0] , self.position_matrix[6][9][1] +5, 40, 40])
         self.blocks_array.append([self.position_matrix[8][9][0] , self.position_matrix[8][9][1] +5, 40, 40])
+        
     
     def set_obstacles_cell_position(self):
         #obstacles_cell_position is an array with the cells coordinates of obstacles
@@ -184,6 +223,7 @@ class MainWindow(QMainWindow):
                 Messaging.send_belief(self._from, 'set_obs', [self.obstacles_cell_position[i][0] +1, self.obstacles_cell_position[i][1]+1, self.obstacles_cell_position[i][0]+1, self.obstacles_cell_position[i][1]+1 ], 'robot')
     
     def add_new_pathpoint(self, x, y):
+        print(f"Adding new path point: ({x}, {y})")
         print(f"Coordinate in pixel aggiunte: ({self.current_man_pos_x}, {self.current_man_pos_y})")
 
         if self.current_point_index >= len(self.path):
@@ -197,22 +237,29 @@ class MainWindow(QMainWindow):
             print(f"Nuovo punto aggiunto al percorso: ({x}, {y})")
             #self.autopilot.x_target = x 
             #self.autopilot.z_target = y
-            metri_x = x * self.grid_cell_size
-            metri_y = y * self.grid_cell_size
+            metri_x, metri_y = self.pixel_to_m(x, y)
             self.arm.set_target_xy_a(metri_x, metri_y, -90)
-
+            print(f"Target set to: ({metri_x}, {metri_y})")
             #self.arm.set_target_xy_a(x, y, -90)
             self.path_completed = False
             
     def run_path(self, delta_t):
         if self.current_point_index < len(self.path):
-            print(f"Indice attuale: {self.current_point_index}, Punto attuale: {self.path[self.current_point_index]}")
+            self.debug_counter = getattr(self, 'debug_counter', 0)  # inizializza solo se non esiste
+            if self.debug_counter < 1:  # Limita a 10 stampe
+                print(f"Indice attuale: {self.current_point_index}, Punto attuale: {self.path[self.current_point_index]}")
+                self.debug_counter += 1
+            #print(f"Indice attuale: {self.current_point_index}, Punto attuale: {self.path[self.current_point_index]}")
             (x, y) = self.path[self.current_point_index]
             p = self.arm.get_pose()
-            print(f"Coordinata target: ({x}, {y}), Posizione attuale: ({p[1][0]}, {p[1][1]})")
+            self.debug_counter1 = getattr(self, 'debug_counter', 0)  # inizializza solo se non esiste
+            if self.debug_counter1 < 1:  # Limita a 10 stampe
+                print(f"Coordinata target: ({x}, {y}), Posizione attuale: ({p[1][0]}, {p[1][1]})")
+                self.debug_counter1 += 1
+            #print(f"Coordinata target: ({x}, {y}), Posizione attuale: ({p[1][0]}, {p[1][1]})")
 
             current_x, current_y = p[1][0], p[1][1]
-            metri_x, metri_y = x * self.grid_cell_size, y * self.grid_cell_size
+            metri_x, metri_y = self.pixel_to_m(x, y)
             d = math.sqrt((metri_x - current_x)**2 + (metri_y - current_y)**2)
             print(f"Distanza calcolata: {d}, Soglia: {self.threshold}")
 
@@ -221,9 +268,10 @@ class MainWindow(QMainWindow):
                 self.current_point_index += 1
                 if self.current_point_index < len(self.path):
                     (x, y) = self.path[self.current_point_index]
-                    metri_x, metri_y = x * self.grid_cell_size, y * self.grid_cell_size
+                    print(f"Nuovo target impostato: ({x}, {y})")
+                    metri_x, metri_y = self.pixel_to_m(x, y)
                     self.arm.set_target_xy_a(metri_x, metri_y, -90)
-                    print(f"Nuovo target impostato: ({metri_x:.2f}, {metri_y:.2f})")
+                    print(f"Nuovo target impostato metri: ({metri_x:.2f}, {metri_y:.2f})")
                 else:
                     self.path_completed = True
         self.arm.evaluate_trajectory(self.delta_t)        
@@ -269,8 +317,8 @@ class MainWindow(QMainWindow):
     def scan_blocks(self, current_pos_pixel_x, current_pos_pixel_y): #da adattare
         if self._from is not None:
             if self.grabbed:
-                x = 8 #2
-                y = 3 #13
+                x = 7 #2  627
+                y = 3 #13 78
                 print("Mi muovo sul cestino in posizione: ", x," ", y," Posizione corrente: ", current_pos_pixel_x," ", current_pos_pixel_y)
                 self.world.grab_last_block()
                 Messaging.send_belief(self._from, '_target', [x, y], 'robot')
@@ -278,8 +326,8 @@ class MainWindow(QMainWindow):
                 return
             
             if self.grabbed == False and self.current_index_pos > len(self.world.get_blocks())-1:
-                x = 3 #7
-                y = 8 #14
+                x = 2 #7
+                y = 7 #14
                 print("Mi muovo sulla posizione iniziale: ", x," ", y," Posizione corrente: ", current_pos_pixel_x," ", current_pos_pixel_y)
                 Messaging.send_belief(self._from, '_target', [x, y], 'robot')
                 Messaging.send_belief(self._from, '_scan', [x, y, current_pos_pixel_x, current_pos_pixel_y ], 'robot')
@@ -300,12 +348,36 @@ class MainWindow(QMainWindow):
             if (x == -1 and y == -1):
                 self.go_to(self.marked_array)
             else:
-                self.marked_array.append([x, y])
+                #self.marked_array.append([x, y])
+                self.marked_array.append([self.position_matrix[x][y-1][0] +15, self.position_matrix[x][y-1][1], 40, 40])
     
     def go_to(self, marked_array):
         print(f"Array marcato ricevuto: {marked_array}")
         self.marked_array.reverse() #nf1 salva il path al contrario
         self.marked_array.insert(0,[self.current_pos_x, self.current_pos_y])
+        
+        for i in range(len(self.marked_array)-1):
+            self.debug_counter5 = getattr(self, 'debug_counter', 0)  # inizializza solo se non esiste
+            if self.debug_counter5 < 1:
+                if i==0:
+                    i+=1
+                self.debug_counter5 += 1
+           
+            (x, y) = self.marked_array[i][0], self.marked_array[i][1]
+            self.debug_counter2 = getattr(self, 'debug_counter', 0)  # inizializza solo se non esiste
+            if self.debug_counter2 < 1:  # Limita a 10 stampe
+                print(f"x e y marked: ({x}, {y})")
+                self.debug_counter2 += 1
+            #print(f"x e y marked: ({x}, {y})")
+            
+            #if i > 0:
+            metri_x, metri_y = self.pixel_to_m(x, y)
+            self.arm.set_target_xy_a(metri_x, metri_y, -90)
+            self.current_pos_x = self.marked_array[-1][0]
+            self.current_pos_y = self.marked_array[-1][1]
+            self.add_new_pathpoint(x, y)
+        self.marked_array = []    
+        """
         count_x = self.current_man_pos_x
         count_y = self.current_man_pos_y
         
@@ -316,10 +388,10 @@ class MainWindow(QMainWindow):
                     self.add_new_pathpoint(self.current_man_pos_x,self.current_man_pos_y)
                     
                 if self.marked_array[i][1] > self.marked_array[i+1][1]:
-                    count_y += 1
+                    count_y -= 1 #count_y += 1
                     
                 if self.marked_array[i][1] < self.marked_array[i+1][1]:
-                    count_y -= 1
+                    count_x += 1 #count_y -= 1
                     
             if self.marked_array[i][1] == self.marked_array[i+1][1]:
                 if self.marked_array[i][0] == self.marked_array[i-1][0] and i != 0:
@@ -327,19 +399,20 @@ class MainWindow(QMainWindow):
                     self.add_new_pathpoint(self.current_man_pos_x, self.current_man_pos_y)
                     
                 if self.marked_array[i][0] > self.marked_array[i+1][0]:
-                    count_x -= 1
+                    count_x += 1 #count_x -= 1
                     
                 if self.marked_array[i][0] < self.marked_array[i+1][0]:
-                    count_x += 1
+                    count_y -= 1 #count_x += 1
                     
         self.current_man_pos_x = count_x
         self.current_man_pos_y = count_y
         self.current_pos_x = self.marked_array[-1][0]
         self.current_pos_y = self.marked_array[-1][1]
+        
         self.add_new_pathpoint(self.current_man_pos_x, self.current_man_pos_y)
         self.marked_array = []   
     
-    """
+    
     def go_to(self,target_x, target_y, target_alpha):
         self.notification = False
         self.arm.set_target_xy_a(target_x, target_y, target_alpha)
@@ -384,7 +457,7 @@ class MainWindow(QMainWindow):
         """
         self.run_path(self.delta_t)     #ULTIMA MODIFICA
         
-        self.arm.evaluate_trajectory(self.delta_t)
+        #self.arm.evaluate_trajectory(self.delta_t)
 
         #p = self.arm.get_pose()
         #self.trajectory_data.append(p[-1])
@@ -394,26 +467,36 @@ class MainWindow(QMainWindow):
         self.update() # repaint window
 
     def check_final_pos(self, x, y): #da aggiornare
+        self.debug_counter3 = getattr(self, 'debug_counter', 0)  # inizializza solo se non esiste
+        if self.debug_counter3 < 1:  # Limita a 10 stampe
+            print(f"x e y checked pos att: ({x}, {y})")
+            self.debug_counter3 += 1
+        #print(f"x e y checked: ({x}, {y})")
         if(len(self.world.get_blocks()) == 0):
             return
         #GRAB
         if self.grabbed:
-            final_x = 800 #100
-            final_y = 300 #1300 -100
+            final_x = 627 #100  627  600
+            final_y = 78 #1300 -100   78   200
         elif(self.current_index_pos > len(self.world.get_blocks())-1):
-            final_x = 3 #7
-            final_y = 8 #14
+            final_x = 607 #7   607  2
+            final_y = 97 #14  97   7
         else:
             final_x = int(self.world.get_blocks()[self.current_index_pos].get_pose()[0])
             final_y = int(self.world.get_blocks()[self.current_index_pos].get_pose()[1] - 100)
+        self.debug_counter4 = getattr(self, 'debug_counter', 0)  # inizializza solo se non esiste
+        if self.debug_counter4 < 1:  # Limita a 10 stampe
+            print(f"x e y final: ({final_x}, {final_y})") 
+            self.debug_counter4 += 1
+        #print(f"x e y final: ({final_x}, {final_y})")    
         
         #SCAN
         if self.scan_blocks_mode == True: 
             x1, y1 = self.world.get_blocks()[self.current_index_pos].get_cell_by_pixel(self.world.get_blocks()[self.current_index_pos].get_pose()[0], self.world.get_blocks()[self.current_index_pos].get_pose()[1])
 	    #se è in prossimità del blocco
-            if((int(x) >= final_x - 20 and int(x) <= final_x + 20) and (int(y) >= final_y - 20 and int(y) <= final_y + 20)):
+            if((int(x) >= final_x - 20 and int(x) <= final_x + 20) and (int(y) >= final_y - 60 and int(y) <= final_y + 60)):
                 #scan colore
-                Messaging.send_belief(self._from, 'color', [COLOR_NAMES[str(self.world.get_blocks()[self.current_index_pos].get_color())] ], 'robot') #legge il colore del blocco
+                Messaging.send_belief(self._from, 'color', [COLOR_NUM[str(self.world.get_blocks()[self.current_index_pos].get_color())] ], 'robot') #legge il colore del blocco
                 if self.current_index_pos < len(self.world.get_blocks())-1: #se i blocchi non sono stati scansionati tutti
                     self.marked_array = []
                     Messaging.send_belief(self._from, 'restart', [x1, y1-1], 'robot') #riavvia la ricerca del path con nf1
@@ -434,14 +517,14 @@ class MainWindow(QMainWindow):
 	         
         else: #in modalità grab
             
-            if((int(x) >= final_x - 20 and int(x) <= final_x + 20) and (int(y) >= final_y - 20 and int(y) <= final_y + 20)): #quando è in prossimità del punto
-                if final_x == 800 and final_y == 300: #se il robot si trova sul cestino
+            if((int(x) >= final_x - 20 and int(x) <= final_x + 20) and (int(y) >= final_y - 60 and int(y) <= final_y + 60)): #quando è in prossimità del punto
+                if final_x == 627 and final_y == 78: #se il robot si trova sul cestino 600 200
 
                     self.grabbed = False
                     #qui operazione di release
-                    print("Rilascio il cubo di colore: ", COLOR_NAMES[str(self.world.get_blocks()[self.current_index_pos].get_color())])
+                    print("Rilascio il cubo di colore: ", COLOR_NUM[str(self.world.get_blocks()[self.current_index_pos].get_color())])
                     Messaging.send_belief(self._from, 'remove_block', [self.world.get_blocks()[self.current_index_pos].get_pose()[0], self.world.get_blocks()[self.current_index_pos].get_pose()[1], self.world.get_blocks()[self.current_index_pos].get_color()], 'robot')
-                    Messaging.send_belief(self._from, 'trashed', [COLOR_NAMES[str(self.world.get_blocks()[self.current_index_pos].get_color())]], 'robot')
+                    Messaging.send_belief(self._from, 'trashed', [COLOR_NUM[str(self.world.get_blocks()[self.current_index_pos].get_color())]], 'robot')
                     
                     #si avvia verso il prossimo grab
                     x1, y1 = self.world.get_blocks()[self.current_index_pos].get_cell_by_pixel(self.world.get_blocks()[self.current_index_pos].get_pose()[0], self.world.get_blocks()[self.current_index_pos].get_pose()[1])
@@ -450,11 +533,11 @@ class MainWindow(QMainWindow):
                     if self.current_index_pos > len(self.world.get_blocks())-1: #se tutti i blocchi sono stati grabbati
                         self.world.remove_blocks()
                         self.marked_array = []
-                        Messaging.send_belief(self._from, 'restart', [5, 2], 'robot') #ritorna nella posizione iniziale
+                        Messaging.send_belief(self._from, 'restart', [7, 3], 'robot') #ritorna nella posizione iniziale
                     else:
                         self.marked_array = []
                         #si riparte dal cestino al prossimo blocco da grabbare
-                        Messaging.send_belief(self._from, 'restart', [5, 2], 'robot') #riavvia la ricerca del path
+                        Messaging.send_belief(self._from, 'restart', [7, 3], 'robot') #riavvia la ricerca del path
                         
                 else: #si trova su un blocco
                     if self.grabbed != True:
@@ -515,7 +598,10 @@ class MainWindow(QMainWindow):
         #self.painter.paint(qp, self.t)
         #self.world.paint(qp)
         x, y, w, h = self.obstacles_matrix[0]
-        
+        #print(f"coord obs: ({x}, {y})")
+        #metri_x, metri_y = self.pixel_to_m(x, y)
+        #self.arm.set_target_xy_a(metri_x, metri_y, -90)
+        #print(f"Nuovo target impostato: ({metri_x:.2f}, {metri_y:.2f})")
         qp.setPen(QPen(QtGui.QColor(217,95,14), 5, Qt.SolidLine))
         qp.setBrush(QBrush(QtGui.QColor(217,95,14)))
         qp.drawRect(x,y,w,h)
@@ -536,10 +622,27 @@ class MainWindow(QMainWindow):
         
         #qp.end()
     
-        p = self.arm.get_pose()
-        x_man_pos = int(math.ceil(100 + (p[1][0] * 100))) #600
-        y_man_pos = int(500 - (p[1][1] * 100 )) #1300
-        self.check_final_pos(x_man_pos, y_man_pos)
+        p = self.arm.get_pose() #provare a utilizzare solo questi valori senza trasformazioni
+        #self.m_to_pixel(p[1][0], p[1][1])
+        pxx, pxy = self.m_to_pixel(p[1][0], p[1][1])
+        #print(f"Posizione pixel: ({int(pxx)}, {int(pxy)}), Posizione attuale: ({p[1][0]}, {p[1][1]})")
+        #x_man_pos = int(math.ceil(600 + (p[1][0] * 100))) #600
+        #y_man_pos = int(100 - (p[1][1] * 100 )) #1300
+        #self.check_final_pos(x_man_pos, y_man_pos)
+        self.check_final_pos(int(pxx), int(pxy))
+        """
+        for i in range(4):
+            #self.blocks_array.append([self.position_matrix[2][9][0] , self.position_matrix[2][9][1] +5, 40, 40])
+            #self.blocks_array.append([self.position_matrix[1][9][0] , self.position_matrix[1][9][1] +5, 40, 40])
+            #self.blocks_array.append([self.position_matrix[0][9][0] , self.position_matrix[0][9][1] +5, 40, 40])
+            #self.blocks_array.append([self.position_matrix[3][9][0] , self.position_matrix[3][9][1] +5, 40, 40])
+            x, y, w, h = self.blocks_array[i]
+            print(f"coord first blocks: ({x}, {y}, {i})")
+            metx, mety = self.pixel_to_m(x, y)
+            print(f"coord mt first blocks: ({metx}, {mety}, {i})")
+            px, py = self.m_to_pixel(metx, mety)
+            print(f"coord px first blocks: ({px}, {py}, {i})")
+        """    
     # Aggiungi il codice per visualizzare la matrice
     # Ogni posizione (col, row) della matrice sarà rappresentata da un piccolo cerchio
         for i in range(self.rc):  #  righe
